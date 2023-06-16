@@ -138,7 +138,7 @@ SynthDef(\vocal, {
 	snd = snd * Env.linen(0.0, duration, 0.001).ar(Done.freeSelf);
 	snd = Pan2.ar(snd, \pan.kr(0));
 	snd = snd * \amp.kr(1);
-	snd = snd * -15.dbamp;
+	snd = snd * -9.dbamp;
 	Out.ar(\out.kr, snd);
 }).add;
 
@@ -272,7 +272,7 @@ SynthDef(\glitch2, {
 	snd = snd.clip2;
 	snd = Balance2.ar(snd[0], snd[1], \pan.kr(0));
 	snd = snd * \amp.kr(1);
-	snd = snd * -8.dbamp;
+	snd = snd * -12.dbamp;
 	Out.ar(\out.kr, snd);
 }).add;
 
@@ -332,15 +332,26 @@ SynthDef(\pad, {
 	snd = RLPF.ar(snd, LFNoise2.kr(1 ! 4).exprange(500, 1200), 0.1);
 	snd = Splay.ar(snd);
 	snd = LPF.ar(snd, 3000);
-	snd = snd * Env.asr(0.3, 1, 1).ar(Done.freeSelf, \gate.kr(1));
+	snd = snd * Env.asr(0.3, \dur.kr(1), 1).ar(Done.freeSelf, \gate.kr(1));
 	snd = snd * -3.dbamp;
 	snd = snd * \amp.kr(0.01);
 	Out.ar(\out.kr(0), snd);
 }).add;
+
+// SynthDef(\chip, {
+// 	var snd;
+// 	snd = (LFPulse.ar(\freq.kr(440) * (2 ** LFPulse.ar(\octaveFreq.kr(9), 0.5))) - (1 / 2)).sign;
+// 	snd = snd * EnvGen.kr(Env.asr(0.0, 1, \dur.kr(1)), gate:1, doneAction: Done.freeSelf);
+// 	snd = snd * \amp.kr(-10.dbamp);
+// 	snd = Pan2.ar(snd, \pan.kr(0));
+// 	OffsetOut.ar(\out.kr(0), snd);
+// }).add;
 )
 
+Synth(\chip, [dur: 0.1]);
+
 // Synth(\ressquares)
-~tempo = TempoClock.new(92/60);
+~tempo = TempoClock.new(68/60);
 (
 Routine({
 	var p_scale = 1;
@@ -348,7 +359,7 @@ Routine({
 	var maxP = max(prol);  // calculate maximum of prol array
 	var reg_seq = (Pinf(0,1)*12).asStream;
 	// var inst = Pseq([\vocal2, \glitch1, \kick, \fmPluck, \perc, \vocal, \glitch2, \perc2, \fmPluck, \snare].scramble,1).asStream;
-	var inst = Pseq([\fmPluck,\apadMH,Pseq([\perc, \perc2, \vocal],1),\glitch1],inf).asStream;
+	var inst = Pseq([\fmPluck,\apadMH,Pseq([\perc, \perc2, \vocal],1).asStream,\glitch1],inf).asStream;
 	var marker = Pseq([\marker1, \marker4, \marker1, \marker3],inf).asStream;
 	var interval = Pseq([0.6667, 1.333, 1.833, 2],inf).asStream;
 	var fx;
@@ -371,7 +382,7 @@ Routine({
 			\freq, (66 + reg /*+ Pdup(prol.size, (Pinf(0,3)*3.86))*/ + (Pinf(0,39)*int_scale)).midicps,
 			\pan, Pbrown(-1,1,0.16667),
 			// \mu, 1.0 - (p / maxP),  // Normalize p to range [0,1] and subtract from 1
-			\amp, (-3 - (p*0.3)).dbamp,
+			\amp, (-5 - (p*0.6+(i*0.1667))).dbamp,
 			// \blur, Pfunc({
 			// 	if(synth==\fmPluck,
 			// 		{1 + (1*(p / maxP))},
@@ -379,6 +390,64 @@ Routine({
 			// 	)
 			// }),
 			// \out, Prand([0, \fx]),
+		).play(~tempo, quant:1);
+		p.wait;
+	};
+}).play(~tempo, quant:1);
+)
+
+
+Synth(\chip)
+
+~tempo = TempoClock.new(54/60);
+(
+Routine({
+	var p_scale = 2;
+	var prol = ([9]++[6,4,5,3,1,7,2,8]++[ 3, 5, 4, 6, 8, 2, 7, 1 ]++[0]).nthPrime*p_scale;
+	var maxP = max(prol);  // calculate maximum of prol array
+	var reg_seq = (Pinf(0,1)*12).asStream;
+	var insts = [\fmPluck, \apadMH, \, \];
+	var innerSeq1 = [\perc, \vocal, \perc2];
+	var innerSeq2 = [\glitch1, \glitch2];
+	var innerIndex1 = 0;
+	var innerIndex2 = 0;
+	var inst = Pfunc({ |event|
+		var idx = event[\outerIndex];
+		if (idx == 2) {
+			var ret = innerSeq1[innerIndex1 % innerSeq1.size];
+			innerIndex1 = innerIndex1 + 1;
+			ret
+		} {
+			if(idx == 3) {
+				var ret = innerSeq2[innerIndex2 % innerSeq2.size];
+				innerIndex2 = innerIndex2 + 1;
+				ret
+			} {
+				insts[idx]
+			}
+		}
+	}).asStream;
+	var marker = Pseq([\marker1, \marker4, \marker1, \marker3],inf).asStream;
+	var interval = Pseq([0.6667, 1.333, 1.833, 2],inf).asStream;
+	var fx;
+	prol.do{ |p, i|
+		var reg = reg_seq.next;
+		var synth = inst.next((outerIndex: i % insts.size));
+		var mrk_synth = marker.next;
+		var int_scale = interval.next;
+		reg = reg.fold(-36, 48);
+		("VOICE " ++ (i+1) ++ " p: " ++ p ++ " reg: " ++ reg ++ " inst: " ++ synth).postln;
+		s.bind { Synth(mrk_synth, [freq: 66.midicps, ratio: 1.8333, amp: -16.dbamp]) };
+		if(p==prol.minItem,
+			{synth = \kick},
+			{}
+		);
+		Pbind(
+			\instrument, synth,
+			\dur, Autoref(prol.rotate(-1*i), 1),
+			\freq, (66 + reg + (Pinf(0,39)*int_scale)).midicps,
+			\pan, Pbrown(-1,1,0.16667),
+			\amp, (-5 - (p*0.3+(i*0.25))).dbamp,
 		).play(~tempo, quant:1);
 		p.wait;
 	};
