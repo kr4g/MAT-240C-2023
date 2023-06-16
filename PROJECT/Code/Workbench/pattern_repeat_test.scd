@@ -82,7 +82,7 @@ SynthDef(\marker1, {
 
 SynthDef(\marker2, {
 	var snd;
-	snd = (260 * (1.5 ** [0, 1, 2, 3]) * \ratio.kr(1)).collect { |freq|
+	snd = (78.midicps * (1.5 ** [0, 1, 2, 3]) * \ratio.kr(1)).collect { |freq|
 		var snd;
 		snd = LFTri.ar(freq * (LFNoise2.kr(8 ! 2) * 0.1).midiratio) * LFNoise2.kr(1 ! 2);
 		snd = midSides.(snd);
@@ -100,7 +100,7 @@ SynthDef(\marker2, {
 
 SynthDef(\marker3, {
 	var snd, freq;
-	freq = 440 * \ratio.kr(1) * Demand.ar(Impulse.ar(20 * XLine.kr(1, 2, 1)), 0, Dseq(1.5 ** (0..3), 5));
+	freq = 72.midicps * \ratio.kr(1) * Demand.ar(Impulse.ar(20 * XLine.kr(1, 2, 1)), 0, Dseq(1.5 ** (0..3), 5));
 	snd = Pulse.ar(freq);
 	snd = snd + GVerb.ar(snd, 30);
 	snd = snd * Env.perc(0.01, 3.0).ar(Done.freeSelf, \gate.kr(1));
@@ -113,7 +113,7 @@ SynthDef(\marker3, {
 
 SynthDef(\marker4, {
 	var snd, freq;
-	freq = 260 * (1.5 ** (0..3));
+	freq = 66.midicps * (3.1456.midiratio ** (0..3));
 	snd = Saw.ar(freq);
 	snd = snd.collect { |snd| LPF.ar(snd, TExpRand.ar(100, 8000, Dust.ar(10)).lag(0.01)); };
 	snd = snd.sum;
@@ -226,7 +226,7 @@ SynthDef(\snare, {
 
 SynthDef(\perc, {
 	var snd;
-	snd = SinOsc.ar(900 * \oct.kr(0).midiratio * (1.5 ** [0, 1, 2])).sum;
+	snd = SinOsc.ar(\freq.ar(900) * \oct.kr(0).midiratio * (1.5 ** [0, 1, 2])).sum;
 	snd = snd * (1 + (4 * Env.perc(0, 0.01).ar));
 	snd = snd * Env.perc(0.001, 0.1).ar;
 	snd = snd + GVerb.ar(snd * -15.dbamp, 10);
@@ -255,7 +255,7 @@ SynthDef(\glitch1, {
 	snd = Hasher.ar(Sweep.ar(Impulse.ar(7235)) + [0, 1]);
 	snd = snd * Env([0, 5, 0.1, 0], [0, 0.1, 1]).ar(Done.freeSelf);
 	snd = snd.clip2;
-	snd = FreqShift.ar(snd, 310);
+	snd = FreqShift.ar(snd, \freq.ar(310));
 	snd = HPF.ar(snd, 1120);
 	snd = Balance2.ar(snd[0], snd[1], \pan.kr(0));
 	snd = snd * \amp.kr(1);
@@ -338,6 +338,245 @@ SynthDef(\pad, {
 	Out.ar(\out.kr(0), snd);
 }).add;
 
+SynthDef(\feedbackPad1, {
+	arg
+	// Standard Values
+	out = 0, amp = 0.01, gate = 1, freq = 75, pan = 0,
+	// Controls for ampEnv
+	att = 2, dec = 1, sus = 1, rel = 4, crv = 0,
+	// Controls for fbEnv
+	fbStartStop = 0, fbAtt = 3, fbPeak = 0.8, fbDec = 2, fbSus = 0.67, fbRel = 5,
+	// Confrols for delEnv
+	delStartStop = 0.55, delAtt = 1, delPeak = 0, delDec = 2, delSus = 0.25, delRel = 3.5;
+
+	var snd, fbIn, fbOut, ampEnv, fbEnv, delEnv;
+
+	// Set up the Envelopes
+	ampEnv = Env.adsr(
+		attackTime: att,
+		decayTime: dec,
+		sustainLevel: sus,
+		releaseTime: rel,
+		curve: crv).ar(gate: gate);
+
+	fbEnv = Env.adsr(
+		attackTime: fbAtt,
+		decayTime: fbDec,
+		sustainLevel: fbSus,
+		releaseTime: fbRel,
+		peakLevel: fbPeak,
+		curve: \lin,
+		bias: fbStartStop).ar(gate: gate);
+
+	delEnv = Env.adsr(
+		attackTime: delAtt,
+		decayTime: delDec,
+		sustainLevel: delSus,
+		releaseTime: delRel,
+		peakLevel: delPeak,
+		curve: \lin,
+		bias: delStartStop).ar(gate: gate);
+
+	// Receive the feedback
+	fbIn = LocalIn.ar;
+
+	// The Sound (yup, that's all it is)
+	snd = SinOsc.ar(
+		freq: freq,
+		phase: fbIn * pi);
+
+	// Delay the feedback
+	fbOut = DelayC.ar(
+		in: snd,
+		maxdelaytime: delStartStop.max(delPeak.max(delSus)),
+		delaytime: delEnv,
+		mul: fbEnv);
+
+	// Send the feedback
+	LocalOut.ar(fbOut);
+
+	// Output Stuff
+	snd = Mix.ar(snd) * ampEnv * amp;
+	snd = Limiter.ar(snd);
+
+	DetectSilence.ar(in: snd, doneAction: 2);
+
+	Out.ar(out, Pan2.ar(snd, pan));
+},
+metadata: (
+	credit: "Josh Mitchell",
+	category: \pads,
+	tags: [\pitched]
+)
+).add;
+
+SynthDef(\feedbackPad2, {
+	arg
+	// Standard Values
+	out = 0, amp = 0.01, gate = 1, freq = 100, pan = 0,
+	// Controls for ampEnv
+	att = 1.5, dec = 0.1, sus = 1, rel = 1.75, crv = 0,
+	// Controls for fbEnv
+	fmStartStop = 0, fmAtt = 1, fmPeak = 5, fmDec = 0.5, fmSus = 2, fmRel = 1,
+	// Other Controls (thresh goes from 0 to 1, polFlip is 0 or 1)
+	thresh = 0.0075, polFlip = 1, del = 0.1, rq = 0.9, filterLo = 1500, filterHi = 5000;
+
+	var snd, fbIn, polarity, fbOut, ampEnv, fmEnv;
+
+	// Set up the Envelopes
+	ampEnv = Env.adsr(
+		attackTime: att,
+		decayTime: dec,
+		sustainLevel: sus,
+		releaseTime: rel,
+		peakLevel: amp,
+		curve: crv).ar(gate: gate, doneAction: 2);
+
+	fmEnv = Env.adsr(
+		attackTime: fmAtt,
+		decayTime: fmDec,
+		sustainLevel: fmSus,
+		releaseTime: fmRel,
+		peakLevel: fmPeak,
+		curve: \lin,
+		bias: fmStartStop).ar(gate: gate);
+
+	// Receive the feedback
+	fbIn = LocalIn.ar;
+	polarity = Schmidt.ar(
+		in: fbIn,
+		lo: -1 * thresh,
+		hi: thresh) ;
+	polarity = (polarity * 2) - 1;
+	polarity = polarity * ((polFlip * -2) + 1);
+
+	// Make The Sound
+	snd = LFTri.ar(
+		freq: Clip.ar(
+			in: freq + (fbIn * fmEnv),
+			lo: 30,
+			hi: SampleRate.ir/2),
+		mul: polarity
+	);
+
+	// Filter the Sound
+	snd = RLPF.ar(
+		in: snd,
+		freq: LinExp.ar(
+			in: ampEnv,
+			srclo: 0, srchi: amp,
+			dstlo: filterHi, dsthi: filterLo),
+		rq: rq);
+
+	// Delay the feedback
+	fbOut = DelayC.ar(
+		in: snd,
+		maxdelaytime: del,
+		delaytime: del,
+		mul: 1);
+
+	// Feedback the Sound
+	LocalOut.ar(fbOut);
+
+	// Output Stuff
+	snd = Mix.ar(snd) * ampEnv;
+	snd = Limiter.ar(snd);
+
+	Out.ar(out, Pan2.ar(snd, pan));
+},
+metadata: (
+	credit: "Josh Mitchell",
+	category: \pads,
+	tags: [\pitched]
+)
+).add;
+
+SynthDef(\feedbackPad3, {
+	arg
+	// Standard Values
+	out = 0, amp = 0.15, gate = 1, freq = 100, pan = 0,
+	// Envelope Controls
+	att = 3, dec = 1, sus = 1, rel = 5, crv = 0,
+	// Reverb Controls (all go from 0 to 1)
+	reverbMix = 0.75, roomSize = 0.9, damp = 0.5,
+	// Other Controls (interval is in semitones)
+	sampleRate = 20, notes = 6, interval = 7;
+
+	var env, fbIn, snd;
+
+	// Set up the Envelopes
+	env = Env.adsr(
+		attackTime: att,
+		decayTime: dec,
+		sustainLevel: sus,
+		releaseTime: rel,
+		curve: crv).ar(gate: gate);
+
+	// Receive and Sample the feedback
+	fbIn = Latch.ar(
+		in: (LocalIn.ar + 1)/2,
+		trig: Impulse.ar(
+			freq: sampleRate));
+	fbIn = (fbIn * notes.abs * env).round(1);
+	fbIn = (fbIn * interval).midiratio;
+
+	// Make The Sound
+	snd = LFTri.ar(
+		freq: freq * fbIn,
+		mul: env);
+
+	// Feedback the Sound
+	LocalOut.ar(snd);
+
+	// Reverb the Sound
+	snd = FreeVerb.ar(
+		in:  snd,
+		mix: reverbMix,
+		room: roomSize,
+		damp: damp);
+
+	//Filter the Sound
+	snd = RHPF.ar(
+		in: snd,
+		freq: freq,
+		rq: 0.5);
+	snd = LPF.ar(
+		in: snd,
+		freq: [42,48,54,60,66,72,84,90,96].midicps,
+		mul: 1/9);
+
+	// Output Stuff
+	snd = Mix.ar(snd) * amp;
+	snd = Limiter.ar(snd);
+
+	DetectSilence.ar(in: snd, doneAction: 2);
+
+	Out.ar(out, Pan2.ar(snd, pan));
+},
+metadata: (
+	credit: "Josh Mitchell",
+	category: \pads,
+	tags: [\pitched]
+)
+).add;
+
+SynthDef(\spacetheremin,{|out= 0 freq = 440 amp = 0.1 gate=1 lforate = 3 lfowidth= 0.5 cutoff= 4000 rq=0.25 lagTime=0.1 pan=0.0|
+
+	var lfo, osc, filter, env;
+
+	lforate = IRand(3,6);
+
+	lfo = LFTri.kr(lforate+(LFNoise1.kr(5,0.3,0.3)),Rand(0,2.0));
+
+	osc = Saw.ar((freq.lag(lagTime).cpsmidi+(lfo*lfowidth)).midicps,0.3);
+
+	filter = BLowPass4.ar(osc,cutoff.lag(lagTime*4),rq);
+
+	env = EnvGen.ar(Env.adsr(0.6,0.0,1.0,0.9195),gate,doneAction:2)*0.5;
+
+	Out.ar(out,Pan2.ar(filter*env*amp.lag(lagTime*4),pan));
+
+}).add;
 // SynthDef(\chip, {
 // 	var snd;
 // 	snd = (LFPulse.ar(\freq.kr(440) * (2 ** LFPulse.ar(\octaveFreq.kr(9), 0.5))) - (1 / 2)).sign;
@@ -348,67 +587,18 @@ SynthDef(\pad, {
 // }).add;
 )
 
-Synth(\chip, [dur: 0.1]);
-
-// Synth(\ressquares)
-~tempo = TempoClock.new(68/60);
-(
-Routine({
-	var p_scale = 1;
-	var prol = [6,4,5,3,1,7,2,8].nthPrime*p_scale;
-	var maxP = max(prol);  // calculate maximum of prol array
-	var reg_seq = (Pinf(0,1)*12).asStream;
-	// var inst = Pseq([\vocal2, \glitch1, \kick, \fmPluck, \perc, \vocal, \glitch2, \perc2, \fmPluck, \snare].scramble,1).asStream;
-	var inst = Pseq([\fmPluck,\apadMH,Pseq([\perc, \perc2, \vocal],1).asStream,\glitch1],inf).asStream;
-	var marker = Pseq([\marker1, \marker4, \marker1, \marker3],inf).asStream;
-	var interval = Pseq([0.6667, 1.333, 1.833, 2],inf).asStream;
-	var fx;
-	prol.do{ |p, i|
-		var reg = reg_seq.next;
-		var synth = inst.next;
-		var mrk_synth = marker.next;
-		var int_scale = interval.next;
-		// if(synth==nil,
-		// 	{ synth = \default },
-		// 	{}
-		// );
-		reg = reg.fold(-36, 48);
-		("VOICE " ++ (i+1) ++ " p: " ++ p ++ " reg: " ++ reg ++ " inst: " ++ synth).postln;
-		s.bind { Synth(mrk_synth, [freq: 66.midicps, ratio: 1.8333, amp: -16.dbamp]) };
-		Pbind(
-			\instrument, synth,
-			// \dur, Autoref(prol.copySeries(i%7, 7).rotate(-1*i), 1),
-			\dur, Autoref(prol.rotate(-1*i), 1),
-			\freq, (66 + reg /*+ Pdup(prol.size, (Pinf(0,3)*3.86))*/ + (Pinf(0,39)*int_scale)).midicps,
-			\pan, Pbrown(-1,1,0.16667),
-			// \mu, 1.0 - (p / maxP),  // Normalize p to range [0,1] and subtract from 1
-			\amp, (-5 - (p*0.6+(i*0.1667))).dbamp,
-			// \blur, Pfunc({
-			// 	if(synth==\fmPluck,
-			// 		{1 + (1*(p / maxP))},
-			// 		{1},
-			// 	)
-			// }),
-			// \out, Prand([0, \fx]),
-		).play(~tempo, quant:1);
-		p.wait;
-	};
-}).play(~tempo, quant:1);
-)
-
-
 Synth(\chip)
 
-~tempo = TempoClock.new(54/60);
+~tempo = TempoClock.new(92/60);
 (
 Routine({
-	var p_scale = 2;
-	var prol = ([9]++[6,4,5,3,1,7,2,8]++[ 3, 5, 4, 6, 8, 2, 7, 1 ]++[0]).nthPrime*p_scale;
+	var p_scale = 3;
+	var prol = ([9]++[6,4,5,3,1,7,2,8]++[12]++[ 3, 5, 4, 6, 8, 2, 7, 0 ]++[1]).nthPrime*p_scale;
 	var maxP = max(prol);  // calculate maximum of prol array
 	var reg_seq = (Pinf(0,1)*12).asStream;
-	var insts = [\fmPluck, \apadMH, \, \];
+	var insts = [\, \apadMH, \, \, \fmPluck, \spacetheremin];
 	var innerSeq1 = [\perc, \vocal, \perc2];
-	var innerSeq2 = [\glitch1, \glitch2];
+	var innerSeq2 = [\glitch1, \fmPluck];
 	var innerIndex1 = 0;
 	var innerIndex2 = 0;
 	var inst = Pfunc({ |event|
@@ -436,18 +626,29 @@ Routine({
 		var mrk_synth = marker.next;
 		var int_scale = interval.next;
 		reg = reg.fold(-36, 48);
-		("VOICE " ++ (i+1) ++ " p: " ++ p ++ " reg: " ++ reg ++ " inst: " ++ synth).postln;
 		s.bind { Synth(mrk_synth, [freq: 66.midicps, ratio: 1.8333, amp: -16.dbamp]) };
-		if(p==prol.minItem,
-			{synth = \kick},
+		if(i==0,
+			{ synth=\feedbackPad3 },
 			{}
 		);
+		if(p==prol.minItem,
+			{synth = \kick},
+			{
+				if(p==prol.maxItem,
+					{
+						synth = \feedbackPad2;
+					},
+					{});
+			}
+		);
+		("VOICE " ++ (i+1) ++ " p: " ++ p ++ " reg: " ++ reg ++ " inst: " ++ synth).postln;
 		Pbind(
 			\instrument, synth,
 			\dur, Autoref(prol.rotate(-1*i), 1),
 			\freq, (66 + reg + (Pinf(0,39)*int_scale)).midicps,
 			\pan, Pbrown(-1,1,0.16667),
-			\amp, (-5 - (p*0.3+(i*0.25))).dbamp,
+			\amp, (-5 - (p*0.3+(i*0.41))).dbamp,
+			\ratio, 1.8333
 		).play(~tempo, quant:1);
 		p.wait;
 	};
