@@ -1,6 +1,11 @@
 s.boot;
+(
 ServerOptions.outDevices;
-s.options.outDevice_("JBL Flip 6");
+s.options.outDevice_(
+	// "JBL Flip 6"
+	"Scarlett 4i4 USB"
+);
+)
 s.reboot;
 
 ~tempo = TempoClock.new(72/60);
@@ -105,7 +110,7 @@ SynthDef(\marker3, {
 	snd = snd + GVerb.ar(snd, 30);
 	snd = snd * Env.perc(0.01, 3.0).ar(Done.freeSelf, \gate.kr(1));
 	snd = Balance2.ar(snd[0], snd[1], \pan.kr(0));
-	snd = snd * -20.dbamp;
+	snd = snd * -28.dbamp;
 	snd = snd * \amp.ar(0.dbamp);
 	Out.ar(\out.kr, snd);
 }).add;
@@ -122,7 +127,7 @@ SynthDef(\marker4, {
 	};
 	snd = snd * Env.perc(0.01, 3.0).ar(Done.freeSelf, \gate.kr(1));
 	snd = Balance2.ar(snd[0], snd[1], \pan.kr(0));
-	snd = snd * -20.dbamp;
+	snd = snd * -24.dbamp;
 	snd = snd * \amp.ar(0.dbamp);
 	Out.ar(\out.kr, snd);
 }).add;
@@ -226,14 +231,14 @@ SynthDef(\snare, {
 
 SynthDef(\perc, {
 	var snd;
-	snd = SinOsc.ar(\freq.ar(900) * \oct.kr(0).midiratio * (1.5 ** [0, 1, 2])).sum;
+	snd = SinOsc.ar(\freq.ar(900) * \oct.kr(24).midiratio * (1.5 ** [0, 1, 2])).sum;
 	snd = snd * (1 + (4 * Env.perc(0, 0.01).ar));
 	snd = snd * Env.perc(0.001, 0.1).ar;
 	snd = snd + GVerb.ar(snd * -15.dbamp, 10);
 	snd = snd * Env.perc(0.0, 1).ar(Done.freeSelf);
 	snd = Balance2.ar(snd[0], snd[1], \pan.kr(0));
 	snd = snd * \amp.kr(1);
-	snd = snd * -16.dbamp;
+	snd = snd * -21.dbamp;
 	Out.ar(\out.kr, snd);
 }).add;
 
@@ -265,7 +270,7 @@ SynthDef(\glitch1, {
 
 SynthDef(\glitch2, {
 	var snd;
-	snd = SinOsc.ar(60);
+	snd = SinOsc.ar(\freq.ar(60));
 	snd = snd - Latch.ar(snd, Impulse.ar(3213 * [1, 1.5]));
 	snd = snd * 10.dbamp;
 	snd = snd * Env([0, 5, 1, 1, 5, 0], [0.001, 0.001, 0.2, 0.001, 0.001]).ar(Done.freeSelf);
@@ -332,8 +337,8 @@ SynthDef(\pad, {
 	snd = RLPF.ar(snd, LFNoise2.kr(1 ! 4).exprange(500, 1200), 0.1);
 	snd = Splay.ar(snd);
 	snd = LPF.ar(snd, 3000);
-	snd = snd * Env.asr(0.3, \dur.kr(1), 1).ar(Done.freeSelf, \gate.kr(1));
-	snd = snd * -3.dbamp;
+	snd = snd * Env.asr(0.03, \dur.kr(1), \dur.kr(1)*0.333).ar(Done.freeSelf, \gate.kr(1));
+	snd = snd * -14.dbamp;
 	snd = snd * \amp.kr(0.01);
 	Out.ar(\out.kr(0), snd);
 }).add;
@@ -419,7 +424,7 @@ SynthDef(\feedbackPad2, {
 	// Controls for fbEnv
 	fmStartStop = 0, fmAtt = 1, fmPeak = 5, fmDec = 0.5, fmSus = 2, fmRel = 1,
 	// Other Controls (thresh goes from 0 to 1, polFlip is 0 or 1)
-	thresh = 0.0075, polFlip = 1, del = 0.1, rq = 0.9, filterLo = 1500, filterHi = 5000;
+	thresh = 0.0075, polFlip = 1, del = 0.01, rq = 0.9, filterLo = 900, filterHi = 9000;
 
 	var snd, fbIn, polarity, fbOut, ampEnv, fmEnv;
 
@@ -473,7 +478,7 @@ SynthDef(\feedbackPad2, {
 		in: snd,
 		maxdelaytime: del,
 		delaytime: del,
-		mul: 1);
+		mul: 0.25);
 
 	// Feedback the Sound
 	LocalOut.ar(fbOut);
@@ -500,7 +505,7 @@ SynthDef(\feedbackPad3, {
 	// Reverb Controls (all go from 0 to 1)
 	reverbMix = 0.75, roomSize = 0.9, damp = 0.5,
 	// Other Controls (interval is in semitones)
-	sampleRate = 20, notes = 6, interval = 7;
+	sampleRate = 20*2, notes = 6, interval = 5.667;
 
 	var env, fbIn, snd;
 
@@ -564,7 +569,7 @@ SynthDef(\spacetheremin,{|out= 0 freq = 440 amp = 0.1 gate=1 lforate = 3 lfowidt
 
 	var lfo, osc, filter, env;
 
-	lforate = IRand(3,6);
+	lforate = IRand(3,7);
 
 	lfo = LFTri.kr(lforate+(LFNoise1.kr(5,0.3,0.3)),Rand(0,2.0));
 
@@ -572,7 +577,9 @@ SynthDef(\spacetheremin,{|out= 0 freq = 440 amp = 0.1 gate=1 lforate = 3 lfowidt
 
 	filter = BLowPass4.ar(osc,cutoff.lag(lagTime*4),rq);
 
-	env = EnvGen.ar(Env.adsr(0.6,0.0,1.0,0.9195),gate,doneAction:2)*0.5;
+	env = EnvGen.ar(Env.adsr(0.5,0.05,\dur.kr(1.0),\dur.kr(1.0)*0.667),gate,doneAction:2);
+
+	amp = amp*0.125;
 
 	Out.ar(out,Pan2.ar(filter*env*amp.lag(lagTime*4),pan));
 
@@ -589,16 +596,16 @@ SynthDef(\spacetheremin,{|out= 0 freq = 440 amp = 0.1 gate=1 lforate = 3 lfowidt
 
 Synth(\chip)
 
-~tempo = TempoClock.new(92/60);
+~tempo = TempoClock.new(54/60);
 (
 Routine({
 	var p_scale = 3;
 	var prol = ([9]++[6,4,5,3,1,7,2,8]++[12]++[ 3, 5, 4, 6, 8, 2, 7, 0 ]++[1]).nthPrime*p_scale;
 	var maxP = max(prol);  // calculate maximum of prol array
 	var reg_seq = (Pinf(0,1)*12).asStream;
-	var insts = [\, \apadMH, \, \, \fmPluck, \spacetheremin];
+	var insts = [\, \apadMH, \, \, \fmPluck, \spacetheremin, \glitch2];
 	var innerSeq1 = [\perc, \vocal, \perc2];
-	var innerSeq2 = [\glitch1, \fmPluck];
+	var innerSeq2 = [\glitch1, \pad];
 	var innerIndex1 = 0;
 	var innerIndex2 = 0;
 	var inst = Pfunc({ |event|
@@ -625,10 +632,10 @@ Routine({
 		var synth = inst.next((outerIndex: i % insts.size));
 		var mrk_synth = marker.next;
 		var int_scale = interval.next;
-		reg = reg.fold(-36, 48);
+		reg = reg.fold(-24, 48);
 		s.bind { Synth(mrk_synth, [freq: 66.midicps, ratio: 1.8333, amp: -16.dbamp]) };
 		if(i==0,
-			{ synth=\feedbackPad3 },
+			{ synth=Pseq([\feedbackPad3, \feedbackPad3, \feedbackPad3, \feedbackPad2].stutter(prol.size),inf); },
 			{}
 		);
 		if(p==prol.minItem,
@@ -636,7 +643,8 @@ Routine({
 			{
 				if(p==prol.maxItem,
 					{
-						synth = \feedbackPad2;
+						synth = \feedbackPad1;
+						~tempo.tempo = ~tempo.tempo * 3.333;
 					},
 					{});
 			}
@@ -645,14 +653,16 @@ Routine({
 		Pbind(
 			\instrument, synth,
 			\dur, Autoref(prol.rotate(-1*i), 1),
-			\freq, (66 + reg + (Pinf(0,39)*int_scale)).midicps,
+			\freq, (54 + reg + (Pinf(0,39)*int_scale)).midicps,
 			\pan, Pbrown(-1,1,0.16667),
-			\amp, (-5 - (p*0.3+(i*0.41))).dbamp,
-			\ratio, 1.8333
+			\amp, (-5 - (p*0.2+(i*0.6677))).dbamp,
+			// \ratio, 1.8333,
+			// \interval, Pinf(0,39)*5.5,
 		).play(~tempo, quant:1);
 		p.wait;
 	};
 }).play(~tempo, quant:1);
 )
-
+s.record();
+s.stopRecording;
 s.meter;
