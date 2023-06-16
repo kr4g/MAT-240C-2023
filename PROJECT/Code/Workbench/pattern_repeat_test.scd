@@ -244,7 +244,7 @@ SynthDef(\perc2, {
 	snd = snd * Env.perc(0.0, 0.5).ar(Done.freeSelf);
 	snd = Balance2.ar(snd[0], snd[1], \pan.kr(0));
 	snd = snd * \amp.kr(1);
-	snd = snd * -10.dbamp;
+	snd = snd * -6.dbamp;
 	Out.ar(\out.kr, snd);
 }).add;
 
@@ -257,7 +257,7 @@ SynthDef(\glitch1, {
 	snd = HPF.ar(snd, 1120);
 	snd = Balance2.ar(snd[0], snd[1], \pan.kr(0));
 	snd = snd * \amp.kr(1);
-	snd = snd * -15.dbamp;
+	snd = snd * -8.dbamp;
 	Out.ar(\out.kr, snd);
 }).add;
 
@@ -595,7 +595,7 @@ Synth(\chip)
 (
 Routine({
 	var p_scale = 3;
-	var prol = ([9]++[6,4,5,3,1,7,2,8]++[12]++[ 3, 5, 4, 6, 8, 2, 7, 0 ]++[1]).nthPrime*p_scale;
+	var prol = ([9]++[6,4,5,3]++[12]++[8,2,7,0]++[1]).nthPrime*p_scale;
 	var maxP = max(prol);  // calculate maximum of prol array
 	var reg_seq = (Pinf(0,1)*12).asStream;
 	var insts = [\, \apadMH, \, \, \fmPluck, \spacetheremin, \glitch2];

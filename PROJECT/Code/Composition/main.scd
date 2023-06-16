@@ -21,9 +21,9 @@ ServerTree.removeAll;
 // ServerOptions.devices;
 s.options.outDevice_(
 	// "MacBook Pro Speakers"
-	// "External Headphones"
+	"External Headphones"
 	// "Scarlett 4i4 USB"
-	"LG TV"
+	// "LG TV"
 );
 // s.options.inDevice_("Built-in Microph");
 // s.options.numOutputBusChannels_(2);
