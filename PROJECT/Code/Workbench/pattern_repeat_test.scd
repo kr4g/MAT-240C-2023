@@ -244,7 +244,7 @@ SynthDef(\perc, {
 
 SynthDef(\perc2, {
 	var snd;
-	snd = SinOsc.ar(420 * \oct.kr(0).midiratio * (1.5 ** [0, 1, 2])).sum;
+	snd = SinOsc.ar(\freq.ar(420) * \oct.kr(0).midiratio * (1.5 ** [0, 1, 2])).sum;
 	snd = snd * (1 + (4 * Env.perc(0, 0.01).ar));
 	snd = snd * Env.perc(0.001, 0.05).ar;
 	snd = snd + Latch.ar(GVerb.ar(snd * -15.dbamp, 3), Impulse.ar(8320));
@@ -505,7 +505,7 @@ SynthDef(\feedbackPad3, {
 	// Reverb Controls (all go from 0 to 1)
 	reverbMix = 0.75, roomSize = 0.9, damp = 0.5,
 	// Other Controls (interval is in semitones)
-	sampleRate = 20*2, notes = 6, interval = 5.667;
+	sampleRate = 20, notes = 9, interval = 5.667;
 
 	var env, fbIn, snd;
 
@@ -636,7 +636,12 @@ Routine({
 		s.bind { Synth(mrk_synth, [freq: 66.midicps, ratio: 1.8333, amp: -16.dbamp]) };
 		if(i==0,
 			{ synth=Pseq([\feedbackPad3, \feedbackPad3, \feedbackPad3, \feedbackPad2].stutter(prol.size),inf); },
-			{}
+			{
+				if(i&7==0,
+					{synth=\default},
+					{}
+				);
+			}
 		);
 		if(p==prol.minItem,
 			{synth = \kick},
@@ -652,10 +657,10 @@ Routine({
 		("VOICE " ++ (i+1) ++ " p: " ++ p ++ " reg: " ++ reg ++ " inst: " ++ synth).postln;
 		Pbind(
 			\instrument, synth,
-			\dur, Autoref(prol.rotate(-1*i), 1),
+			\dur, Autoref(prol.copyRange(0,6).rotate(-1*i), 1),
 			\freq, (54 + reg + (Pinf(0,39)*int_scale)).midicps,
 			\pan, Pbrown(-1,1,0.16667),
-			\amp, (-5 - (p*0.2+(i*0.6677))).dbamp,
+			\amp, (-6 - (p*0.4*(i*0.6677))).dbamp,
 			// \ratio, 1.8333,
 			// \interval, Pinf(0,39)*5.5,
 		).play(~tempo, quant:1);
