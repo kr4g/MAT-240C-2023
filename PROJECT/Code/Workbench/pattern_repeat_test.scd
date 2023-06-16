@@ -3,7 +3,8 @@ s.boot;
 ServerOptions.outDevices;
 s.options.outDevice_(
 	// "JBL Flip 6"
-	"Scarlett 4i4 USB"
+	// "Scarlett 4i4 USB"
+	"MacBook Pro Speakers"
 );
 )
 s.reboot;
@@ -38,26 +39,18 @@ Routine({
 (
 SynthDef(\interpolatingSynth, { |out = 0, freq = 440, mu = 0.5, dur = 1, cutoff = 5000|
 
-	// Percussive envelope: fast attack and decay
+
 	var percEnv = Env.perc(releaseTime: dur).kr(Done.freeSelf, gate:1);
-
-	// Smooth envelope: slow attack and release
 	var smoothEnv = Env.linen(releaseTime: dur).kr(Done.freeSelf, gate:1);
-
-	// Define interpolation levels based on mu
 	var percEnvLevel = mu;
 	var smoothEnvLevel = 1 - mu;
 
-	// Interpolate between the two envelopes
 	var mixedEnv = (percEnv * percEnvLevel) + (smoothEnv * smoothEnvLevel);
 
-	// Oscillator with the mixed envelope applied
 	var sig = SinOsc.ar(freq) * (mixedEnv * 0.25);
 
-	// Apply a low pass filter to cut high frequencies
 	sig = LPF.ar(sig, cutoff) * \amp.ar(-48.dbamp);
 
-	// Output the signal in stereo
 	Out.ar(out, [sig, sig]);
 
 }).add;
