@@ -13,7 +13,7 @@ Autoref : Pattern {
         while { repeatCount < repeats } {
             while { i < proportions.size } {
                 var totalDuration = proportions[i];
-                var subdiv = proportions.collect { |x| totalDuration * (x / proportions.sum) };
+                var subdiv = proportions.rotate(i).collect { |x| totalDuration * (x / proportions.sum) };
                 var j = 0;
                 while { j < subdiv.size } {
                     inval = subdiv[j].yield;

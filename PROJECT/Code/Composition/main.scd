@@ -20,10 +20,10 @@ ServerTree.removeAll;
 // s = Server.local;
 // ServerOptions.devices;
 s.options.outDevice_(
-	"MacBook Pro Speakers"
+	// "MacBook Pro Speakers"
 	// "External Headphones"
 	// "Scarlett 4i4 USB"
-	// "LG TV"
+	"LG TV"
 );
 // s.options.inDevice_("Built-in Microph");
 // s.options.numOutputBusChannels_(2);
@@ -50,7 +50,7 @@ s.newBusAllocators; // for Step 3.
 ~makeNodes = {
 	s.bind({
 		~fxGroup = Group.new;
-		~reverb = Synth(\reverb, [\in, ~reverbBus], ~fxGroup);
+		~reverb = Synth(\spacereverb, [\in, ~reverbBus], ~fxGroup);
 	});
 };
 
@@ -127,10 +127,12 @@ buf.setnMsg(0, ~wt_sig[index].asWavetable);
 				var synth, c;
 				/*s.bind{ Synth(\kick); };*/
 				var inf_seq = Pinf(0,17).asStream;
+				var inst_seq = Pseq(inst,inf).asStream;
 				// var inf_seq = Pseq([0,6,7,4],inf).asStream;
 				var p_rot = seq.rotate(rot);
 				seq.do{ |p, i|
-					var div = p_rot[i], syn = inst.choose;
+					var div = p_rot[i], syn = inst_seq.next;
+					// if(syn == \spacetheremin, {s.bind{syn.set(\out, ~reverbBus);};}, {});
 					c = p/div;
 					// s.bind { synth = Synth(\default, [pan: rrand(-1,1)]); };
 					// p.postln;
@@ -147,12 +149,20 @@ buf.setnMsg(0, ~wt_sig[index].asWavetable);
 		};
 		~center_pitch = 66;
 		~regist = Pinf(0,1).asStream;
+		// Routine {
+		// 	~prol_P.size.do{ |i|
+		// 		// ("p1: " ++ i ++ " of " ++ ~prol_P.size).postln;
+		// 		var off = ~regist.next;
+		// 		var pitch = ~center_pitch + (off * 12);
+		// 		~r0.value(~prol_P, i + 2, pitch.fold(54,102), [\fmPluck, \trianglewavebells], rrand(-0.5,0.5)).play(v, quant:1);
+		// 		(~prol_P.sum).wait;
+		// 	};
+		// }.play(v, quant:1);
 		Routine {
 			~prol_P.size.do{ |i|
-				// ("p1: " ++ i ++ " of " ++ ~prol_P.size).postln;
 				var off = ~regist.next;
-				var pitch = ~center_pitch + (off * 12);
-				~r0.value(~prol_P, i + 2, pitch.fold(54,102), [\apadMH, \default, \trianglewavebells], rrand(-0.5,0.5)).play(v, quant:1);
+				var pitch = ~center_pitch + (off * 7.01);
+				~r0.value(~prol_P, i + 1, pitch.fold(54,102), [\apadMH, \pad, \fmPluck, \spacetheremin], rrand(0.5,1)).play(v, quant:1);
 				(~prol_P.sum).wait;
 			};
 		}.play(v, quant:1);
@@ -160,15 +170,7 @@ buf.setnMsg(0, ~wt_sig[index].asWavetable);
 			~prol_P.size.do{ |i|
 				var off = ~regist.next;
 				var pitch = ~center_pitch + (off * 7.01);
-				~r0.value(~prol_P, i + 1, pitch.fold(54,102), [\pad, \feedbackPad1], rrand(0.5,1)).play(v, quant:1);
-				(~prol_P.sum).wait;
-			};
-		}.play(v, quant:1);
-		Routine {
-			~prol_P.size.do{ |i|
-				var off = ~regist.next;
-				var pitch = ~center_pitch + (off * 7.01);
-				~r0.value(~prol_P, -1*i - 1, pitch.fold(54,102), [\pad, \feedbackPad2], rrand(-1,-0.5)).play(v, quant:1);
+				~r0.value(~prol_P, -1*i - 1, pitch.fold(54,102), [\apadMH, \pad, \feedbackPad1, \trianglewavebells], rrand(-1,-0.5)).play(v, quant:1);
 				(~prol_P.sum).wait;
 			};
 		}.play(v, quant:1);
@@ -181,21 +183,20 @@ buf.setnMsg(0, ~wt_sig[index].asWavetable);
 		// for each prol in prolSet:
 		//     Routine{ AutoRef(prol, "self") }
 
-		t = TempoClock.new(54/60);
-		u = TempoClock.new(54/60);
+		t = TempoClock.new(72/60);
+		u = TempoClock.new(72/60);
 
 		// Regular Canon on 1-cycle AutoRef
 		~r2 = Routine({
 			var c = 3, pan = Pwhite(-1,1).asStream, edo_cycle = Pseq([96,72,36,18,9],inf).asStream;
 			~prol_P.do{ |p, i|
-				p.postln;
-				(t.tempo).postln;
-				(u.tempo).postln;
+				// p.postln;
+				// (t.tempo).postln;
 				~ut_p = ~ut_process_autoref.value(
-					Pseq([\feedbackPad1, \feedbackPad2, \feedbackPad3].stutter(~prol_P.size),inf),
+					Pseq([\trianglewavebells, \pad, \apadMH, \feedbackPad1, \feedbackPad2, \feedbackPad3].reverse.stutter(~prol_P.size),inf),
 					// { if(i % 2 == 0) {rrand(\amTriangle, \default)} {\pulseMod}; }.value,
 					~prol_P * c,
-					(66+12).midicps,
+					(66).midicps,
 					36,
 					0,
 					39,
@@ -203,10 +204,10 @@ buf.setnMsg(0, ~wt_sig[index].asWavetable);
 					// Pseq([1,2,5,17].stutter(~prol_P.size),inf),
 					pan.next,
 				).play(u, quant:1);
-				// s.bind {
-				// 	// Synth(\kick);
-				// 	// u.tempo = u.tempo * 0.9195;
-				// };
+				s.bind {
+					// Synth(\kick);
+					u.tempo = u.tempo * 0.9195;
+				};
 				(p*c).wait;
 			}
 		}).play(t, quant:1);
@@ -315,13 +316,15 @@ s.waitForBoot({
 
 		var lfo, osc, filter, env;
 
+		lforate = IRand(3,6);
+
 		lfo = LFTri.kr(lforate+(LFNoise1.kr(5,0.3,0.3)),Rand(0,2.0));
 
 		osc = Saw.ar((freq.lag(lagTime).cpsmidi+(lfo*lfowidth)).midicps,0.5);
 
 		filter = BLowPass4.ar(osc,cutoff.lag(lagTime*4),rq);
 
-		env = EnvGen.ar(Env.adsr(0.6,0.0,1.0,0.05),gate,doneAction:2);
+		env = EnvGen.ar(Env.adsr(0.6,0.0,1.0,0.9195),gate,doneAction:2);
 
 		Out.ar(out,Pan2.ar(filter*env*amp.lag(lagTime*4),pan));
 
@@ -350,7 +353,7 @@ s.waitForBoot({
 	}).add;
 
 	SynthDef(\trianglewavebells,{
-		arg out = 0, pan = 0.0, freq = 440, amp = 0.05, gate = 1, att = 0.01, dec = 0.1, sus = 1, rel = 0.5, lforate = 10, lfowidth = 0.0, cutoff = 100, rq = 0.5;
+		arg out = 0, pan = 0.0, freq = 440, amp = 0.05, gate = 1, att = 0.01, dec = 0.1, sus = 0.3, rel = 0.75, lforate = 10, lfowidth = 0.0, cutoff = 100, rq = 0.5;
 
 		var osc1, osc2, vibrato, filter, env;
 		vibrato = SinOsc.ar(lforate, Rand(0, 2.0));
@@ -453,10 +456,21 @@ s.waitForBoot({
 		Out.ar(\out.ir(0), sig);
 	}).add;
 
+	SynthDef(\fmPluck, { |out = 0, freq = 440, dur = 1, amp = 0.5, gate = 1|
+		var carrier = SinOsc.ar(freq);
+		var modulator = SinOsc.ar(freq * 2);
+		var envelope = Env.perc(0.25, dur*\blur.kr(1)).kr(gate, doneAction: Done.freeSelf);
+
+		modulator = modulator * envelope * 50;  // The envelope and modulation index (100 here) affect the 'brightness' of the sound
+		carrier = SinOsc.ar(freq + modulator) * envelope * -8.dbamp;
+
+		Out.ar(out, (carrier * amp).dup);
+	}).add;
+
 	SynthDef(\feedbackPad1, {
 		arg
 		// Standard Values
-		out = 0, amp = 1, gate = 1, freq = 75, pan = 0,
+		out = 0, amp = 0.4, gate = 1, freq = 75, pan = 0,
 		// Controls for ampEnv
 		att = 2, dec = 1, sus = 1, rel = 4, crv = 0,
 		// Controls for fbEnv
@@ -677,12 +691,12 @@ s.waitForBoot({
 
 	s.sync;
 
-	~bufPath = PathName.new(thisProcess.nowExecutingPath).parentPath ++ "calibration_tone/";
-
-	b = PathName.new(~bufPath).entries.collect({
-		arg pathname;
-		Buffer.read(s, pathname.fullPath);
-	});
+	// ~bufPath = PathName.new(thisProcess.nowExecutingPath).parentPath ++ "calibration_tone/";
+	//
+	// b = PathName.new(~bufPath).entries.collect({
+	// 	arg pathname;
+	// 	Buffer.read(s, pathname.fullPath);
+	// });
 
 	s.sync;
 
@@ -727,49 +741,6 @@ s.waitForBoot({
 			\out, ~reverbBus,
 		);
 	};
-
-	~sampPat = Pbind(
-		\instrument, \samp,
-		\dur, 1/8,
-		\type, Pwrand([\note, \rest], [0.6, 0.4], inf),
-		\buf, Prand(b, inf),
-		\rate, Pwhite(-12, 12, inf).midiratio,
-		\amp, Pexprand(0.02, 0.5, inf),
-		\atk, 0,
-		\sus, 0,
-		\rel, Pexprand(0.02, 0.5, inf),
-		\out, 0,
-		\outfx, ~reverbBus,
-		\send, Pwhite(-40, -10, inf),
-	);
-
-	~beepPat = Pbind(
-		\instrument, \beep,
-		\dur, 2,
-		\atk, 0,
-		\sus, 0.02,
-		\rel, 0.02,
-		\freq, 1000,
-		\amp, Pexprand(0.02, 0.2, inf),
-		\pan, Pseq([-1, 0, 1, 0],inf),
-		\out, 0,
-		\outfx, ~reverbBus,
-		\send, -10,
-	);
-
-	~dronesPat = Pbind(
-		\instrument, \beep,
-		\dur, 5,
-		\atk, 4,
-		\sus, 0,
-		\rel, 4,
-		\freq, Pexprand(150,300,inf) * Pfuncn({Array.rand(16, -1.0, 1.0).midiratio}, inf),
-		\amp, 0.02,
-		\out, 0,
-		\outfx, ~reverbBus,
-		\send, -10,
-	);
-
 });
 )
 
