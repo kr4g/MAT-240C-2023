@@ -231,7 +231,7 @@ SynthDef(\perc, {
 	snd = snd * Env.perc(0.0, 1).ar(Done.freeSelf);
 	snd = Balance2.ar(snd[0], snd[1], \pan.kr(0));
 	snd = snd * \amp.kr(1);
-	snd = snd * -21.dbamp;
+	snd = snd * -9.dbamp;
 	Out.ar(\out.kr, snd);
 }).add;
 
@@ -244,7 +244,7 @@ SynthDef(\perc2, {
 	snd = snd * Env.perc(0.0, 0.5).ar(Done.freeSelf);
 	snd = Balance2.ar(snd[0], snd[1], \pan.kr(0));
 	snd = snd * \amp.kr(1);
-	snd = snd * -16.dbamp;
+	snd = snd * -10.dbamp;
 	Out.ar(\out.kr, snd);
 }).add;
 
@@ -313,6 +313,8 @@ SynthDef(\apadMH, {
 	snd = SinOsc.ar(freq: [freq, vibrato], mul:(env * tremolo * amp)).distort;
 	snd = Mix.ar([snd]);
 	snd = FreeVerb.ar(snd, reverbMix, roomSize, damp);
+
+	snd = snd * 6.dbamp;
 
 	DetectSilence.ar(snd, 0.0001, 0.2, doneAction: 2);
 	Out.ar(out, Pan2.ar(snd, pan));
@@ -477,7 +479,7 @@ SynthDef(\feedbackPad2, {
 	LocalOut.ar(fbOut);
 
 	// Output Stuff
-	snd = Mix.ar(snd) * ampEnv;
+	snd = Mix.ar(snd) * ampEnv * -16.dbamp;
 	snd = Limiter.ar(snd);
 
 	Out.ar(out, Pan2.ar(snd, pan));
@@ -544,7 +546,7 @@ SynthDef(\feedbackPad3, {
 		mul: 1/9);
 
 	// Output Stuff
-	snd = Mix.ar(snd) * amp;
+	snd = Mix.ar(snd) * amp * -12.dbamp;
 	snd = Limiter.ar(snd);
 
 	DetectSilence.ar(in: snd, doneAction: 2);
@@ -589,7 +591,7 @@ SynthDef(\spacetheremin,{|out= 0 freq = 440 amp = 0.1 gate=1 lforate = 3 lfowidt
 
 Synth(\chip)
 
-~tempo = TempoClock.new(54/60);
+~tempo = TempoClock.new(72/60);
 (
 Routine({
 	var p_scale = 3;
@@ -626,9 +628,9 @@ Routine({
 		var mrk_synth = marker.next;
 		var int_scale = interval.next;
 		reg = reg.fold(-24, 48);
-		s.bind { Synth(mrk_synth, [freq: 66.midicps, ratio: 1.8333, amp: -16.dbamp]) };
+		s.bind { Synth(mrk_synth, [freq: 66.midicps, ratio: 1.8333, amp: -8.dbamp]) };
 		if(i==0,
-			{ synth=Pseq([\feedbackPad3, \feedbackPad3, \feedbackPad3, \feedbackPad2].stutter(prol.size),inf); },
+			{ synth=Pseq([\feedbackPad3, \feedbackPad2].stutter(prol.size),inf); },
 			{
 				if(i&7==0,
 					{synth=\default},
@@ -642,7 +644,7 @@ Routine({
 				if(p==prol.maxItem,
 					{
 						synth = \feedbackPad1;
-						~tempo.tempo = ~tempo.tempo * 3.333;
+						// ~tempo.tempo = ~tempo.tempo * 3.333;
 					},
 					{});
 			}
@@ -653,7 +655,7 @@ Routine({
 			\dur, Autoref(prol.copyRange(0,6).rotate(-1*i), 1),
 			\freq, (54 + reg + (Pinf(0,39)*int_scale)).midicps,
 			\pan, Pbrown(-1,1,0.16667),
-			\amp, (-6 - (p*0.4*(i*0.6677))).dbamp,
+			\amp, (-4 - (p*0.4*(i*0.6677))).dbamp,
 			// \ratio, 1.8333,
 			// \interval, Pinf(0,39)*5.5,
 		).play(~tempo, quant:1);
